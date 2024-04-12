@@ -1,94 +1,85 @@
-import Image from "next/image";
+"use client";
 import styles from "./page.module.css";
+import { SubmitButton } from "./submit";
+import { createMatrix } from "./actions";
+import { useState, useEffect, useRef } from "react";
+import { Grid } from "./grid";
 
 export default function Home() {
+  const [submitted, setSubmitted] = useState(false);
+  const [isInputDisabled, setIsInputDisabled] = useState(false);
+  const [code, setCode] = useState("");
+  const [matrix, setMatrix] = useState<(string | null)[][]>(
+    Array.from({ length: 10 }, () => Array.from({ length: 10 }, () => null))
+  );
+  const weightRef = useRef<string | undefined>();
+
+  useEffect(() => {
+    if (submitted) {
+      const interval = setInterval(async () => {
+        const newMatrix = await createMatrix(weightRef.current);
+        setMatrix(newMatrix.matrix);
+        setCode(newMatrix.code);
+      }, 2000);
+
+      return () => clearInterval(interval);
+    }
+  }, [submitted]);
+
   return (
     <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
+      <form
+        className={styles.form}
+        action={async (formData) => {
+          const weight = formData.get("weight") as string;
+          console.log(weight);
+
+          if (weight) {
+            weightRef.current = weight;
+            setIsInputDisabled(true);
+            setTimeout(() => {
+              setIsInputDisabled(false);
+            }, 4000);
+          }
+
+          setSubmitted(true);
+          const matrix = await createMatrix(weight);
+          setMatrix(matrix.matrix);
+          setCode(matrix.code);
+        }}
+      >
+        <div className={styles.formContent}>
+          <div className={styles.formInputContainer}>
+            <label htmlFor="weight">Character</label>
+            <input
+              className={styles.formInput}
+              type="text"
+              id="weight"
+              name="weight"
+              disabled={isInputDisabled}
+              aria-label="Enter a character to generate a matrix"
+              aria-disabled={isInputDisabled}
             />
-          </a>
+          </div>
+          <div>
+            <SubmitButton />
+          </div>
         </div>
+      </form>
+      <div>
+        <Grid matrix={matrix} />
       </div>
 
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
+      <div aria-live="polite">
+        <div className={styles.codeStatusContainer}>
+          {submitted ? (
+            <span className={styles.red} />
+          ) : (
+            <span className={styles.gray} />
+          )}
+          <p className={styles.statusText}>live</p>
+        </div>
+        <div className={styles.code}>{code}</div>
       </div>
     </main>
   );
